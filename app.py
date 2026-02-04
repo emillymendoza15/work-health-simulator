@@ -11,7 +11,7 @@ st.set_page_config(
 )
 
 # -------------------------------------------------
-# Reset Function (TRUE RESET)
+# Reset Function
 # -------------------------------------------------
 def reset_app():
     st.session_state.clear()
@@ -35,11 +35,11 @@ It presents *population-level associations*, not individual predictions or medic
 st.markdown("---")
 
 # =================================================
-# SIDEBAR — STATE-SAFE INPUTS
+# SIDEBAR — INPUTS WITH SAFE STATE MANAGEMENT
 # =================================================
 st.sidebar.header("Input Parameters")
 
-# Initialize defaults
+# Default values
 defaults = {
     "preset": "Custom",
     "work_hours": 20,
@@ -69,7 +69,7 @@ preset = st.sidebar.selectbox(
     ].index(st.session_state.preset)
 )
 
-# Apply preset ONLY when changed
+# Apply preset only when changed
 if preset != st.session_state.preset:
     st.session_state.preset = preset
 
@@ -80,7 +80,6 @@ if preset != st.session_state.preset:
             "academic_load": "Moderate",
             "homework_hours": 9
         })
-
     elif preset == "High Work + Low Sleep":
         st.session_state.update({
             "work_hours": 30,
@@ -88,7 +87,6 @@ if preset != st.session_state.preset:
             "academic_load": "Heavy",
             "homework_hours": 5
         })
-
     elif preset == "Low Work + Heavy Academics":
         st.session_state.update({
             "work_hours": 5,
@@ -130,7 +128,7 @@ academic_load_map = {"Light": 0.3, "Moderate": 0.6, "Heavy": 1.0}
 academic_load = academic_load_map[academic_load_label]
 
 # -------------------------------------------------
-# MODEL LOGIC (NONLINEAR)
+# MODEL LOGIC (NONLINEAR + RESPONSIVE)
 # -------------------------------------------------
 def run_model(work_hours, sleep_hours, academic_load, homework_hours):
     W_norm = work_hours / 40
@@ -175,26 +173,44 @@ if run_simulation:
 
     st.markdown("---")
 
-    # Labeled, responsive chart
+    # -----------------------------
+    # RESPONSIVE CHART (FIXED)
+    # -----------------------------
     st.subheader("Work Hours vs Academic Engagement")
 
     hours = np.arange(0, 41)
-    engagement = [
-        run_model(h, sleep_hours, academic_load, homework_hours)[0]
-        for h in hours
-    ]
+    engagement = []
+
+    for h in hours:
+        aei, _, _, _ = run_model(
+            work_hours=h,
+            sleep_hours=sleep_hours,
+            academic_load=academic_load,
+            homework_hours=homework_hours
+        )
+        engagement.append(aei)
+
+    current_aei, _, _, _ = run_model(
+        work_hours, sleep_hours, academic_load, homework_hours
+    )
 
     fig, ax = plt.subplots()
-    ax.plot(hours, engagement)
-    ax.axvline(20, linestyle="--")
+    ax.plot(hours, engagement, label="Modeled Trend")
+    ax.scatter(work_hours, current_aei, s=80, zorder=3, label="Current Scenario")
+    ax.axvline(20, linestyle="--", alpha=0.6, label="~20 hr threshold")
+
     ax.set_xlabel("Weekly Work Hours")
     ax.set_ylabel("Academic Engagement Index")
-    ax.set_title("Modeled Relationship Between Work Hours and Academic Engagement")
+    ax.set_title(
+        "Work Hours vs Academic Engagement\n"
+        "(Conditioned on Sleep, Academic Load, and Homework)"
+    )
+    ax.legend()
 
     st.pyplot(fig)
 
 # =================================================
-# WHY UW–MADISON (RESTORED)
+# WHY UW–MADISON
 # =================================================
 st.markdown("---")
 if st.button("Why UW–Madison?"):
@@ -203,10 +219,9 @@ if st.button("Why UW–Madison?"):
     st.markdown("""
     This project was created to reflect how I approach learning when given the opportunity
     to explore complex questions. Rather than simply expressing interest, I wanted to
-    demonstrate **analytical thinking, research awareness, and problem-solving**.
+    demonstrate **analytical thinking, research awareness, and interdisciplinary problem-solving**.
 
-    
-    UW–Madison’s emphasis on undergraduate research, biomedical sciences, and data-informed inquiry
+ UW–Madison’s emphasis on undergraduate research, biomedical sciences, and data-informed inquiry
     aligns strongly with my interest. With access to UW–Madison’s academic environment and
     research opportunities, I am confident I can continue developing work like this at a
     deeper and more rigorous level if given a chance to attend and prove myself. - Emily Mendoza Dominguez
