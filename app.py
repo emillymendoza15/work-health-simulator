@@ -3,19 +3,20 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # -------------------------------------------------
+# Handle Restart SAFELY (top-level)
+# -------------------------------------------------
+if st.session_state.get("do_reset", False):
+    st.session_state.clear()
+    st.session_state["do_reset"] = False
+    st.rerun()
+
+# -------------------------------------------------
 # Page Configuration
 # -------------------------------------------------
 st.set_page_config(
     page_title="Adolescent Employment & Health Outcomes",
     layout="wide"
 )
-
-# -------------------------------------------------
-# Reset Function
-# -------------------------------------------------
-def reset_app():
-    st.session_state.clear()
-    st.rerun()
 
 # -------------------------------------------------
 # Title & Introduction
@@ -39,7 +40,7 @@ st.markdown("---")
 # =================================================
 st.sidebar.header("Input Parameters")
 
-# Default values
+# Defaults
 defaults = {
     "preset": "Custom",
     "work_hours": 20,
@@ -48,9 +49,9 @@ defaults = {
     "homework_hours": 8
 }
 
-for key, value in defaults.items():
-    if key not in st.session_state:
-        st.session_state[key] = value
+for k, v in defaults.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
 
 # Preset selector
 preset = st.sidebar.selectbox(
@@ -69,7 +70,7 @@ preset = st.sidebar.selectbox(
     ].index(st.session_state.preset)
 )
 
-# Apply preset only when changed
+# Apply preset ONCE per change
 if preset != st.session_state.preset:
     st.session_state.preset = preset
 
@@ -96,22 +97,16 @@ if preset != st.session_state.preset:
         })
 
 # Sliders
-work_hours = st.sidebar.slider(
-    "Weekly Work Hours", 0, 40, st.session_state.work_hours
-)
-sleep_hours = st.sidebar.slider(
-    "Average Sleep Per Night (hours)", 5.0, 9.0, st.session_state.sleep_hours, 0.5
-)
+work_hours = st.sidebar.slider("Weekly Work Hours", 0, 40, st.session_state.work_hours)
+sleep_hours = st.sidebar.slider("Average Sleep Per Night (hours)", 5.0, 9.0, st.session_state.sleep_hours, 0.5)
 academic_load_label = st.sidebar.selectbox(
     "Academic Load",
     ["Light", "Moderate", "Heavy"],
     index=["Light", "Moderate", "Heavy"].index(st.session_state.academic_load)
 )
-homework_hours = st.sidebar.slider(
-    "Homework / Study Hours per Week", 0, 15, st.session_state.homework_hours
-)
+homework_hours = st.sidebar.slider("Homework / Study Hours per Week", 0, 15, st.session_state.homework_hours)
 
-# Persist slider changes
+# Persist
 st.session_state.work_hours = work_hours
 st.session_state.sleep_hours = sleep_hours
 st.session_state.academic_load = academic_load_label
@@ -119,7 +114,10 @@ st.session_state.homework_hours = homework_hours
 
 st.sidebar.markdown("---")
 run_simulation = st.sidebar.button("Run Simulation")
-st.sidebar.button("Restart Simulation", on_click=reset_app)
+
+# Restart button (SAFE)
+if st.sidebar.button("Restart Simulation"):
+    st.session_state["do_reset"] = True
 
 # -------------------------------------------------
 # Convert Academic Load
@@ -128,14 +126,13 @@ academic_load_map = {"Light": 0.3, "Moderate": 0.6, "Heavy": 1.0}
 academic_load = academic_load_map[academic_load_label]
 
 # -------------------------------------------------
-# MODEL LOGIC (NONLINEAR + RESPONSIVE)
+# MODEL LOGIC
 # -------------------------------------------------
 def run_model(work_hours, sleep_hours, academic_load, homework_hours):
     W_norm = work_hours / 40
     H_norm = homework_hours / 15
     sleep_deficit = max(0, (8 - sleep_hours) / 3)
 
-    # Threshold effect at 20 hours/week
     if work_hours <= 20:
         work_penalty = 0.2 * W_norm
     else:
@@ -173,21 +170,13 @@ if run_simulation:
 
     st.markdown("---")
 
-    # -----------------------------
-    # RESPONSIVE CHART (FIXED)
-    # -----------------------------
     st.subheader("Work Hours vs Academic Engagement")
 
     hours = np.arange(0, 41)
     engagement = []
 
     for h in hours:
-        aei, _, _, _ = run_model(
-            work_hours=h,
-            sleep_hours=sleep_hours,
-            academic_load=academic_load,
-            homework_hours=homework_hours
-        )
+        aei, _, _, _ = run_model(h, sleep_hours, academic_load, homework_hours)
         engagement.append(aei)
 
     current_aei, _, _, _ = run_model(
@@ -196,7 +185,7 @@ if run_simulation:
 
     fig, ax = plt.subplots()
     ax.plot(hours, engagement, label="Modeled Trend")
-    ax.scatter(work_hours, current_aei, s=80, zorder=3, label="Current Scenario")
+    ax.scatter(work_hours, current_aei, s=80, label="Current Scenario")
     ax.axvline(20, linestyle="--", alpha=0.6, label="~20 hr threshold")
 
     ax.set_xlabel("Weekly Work Hours")
@@ -221,11 +210,10 @@ if st.button("Why UW–Madison?"):
     to explore complex questions. Rather than simply expressing interest, I wanted to
     demonstrate **analytical thinking, research awareness, and interdisciplinary problem-solving**.
 
- UW–Madison’s emphasis on undergraduate research, biomedical sciences, and data-informed inquiry
+    UW–Madison’s emphasis on undergraduate research, biomedical sciences, and data-informed inquiry
     aligns strongly with my interest. With access to UW–Madison’s academic environment and
     research opportunities, I am confident I can continue developing work like this at a
     deeper and more rigorous level if given a chance to attend and prove myself. - Emily Mendoza Dominguez
-
     """)
 
 # =================================================
