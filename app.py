@@ -186,12 +186,12 @@ if st.button("Why UW–Madison?"):
     st.markdown("""
     This project was created to demonstrate how I engage with academic material when given the
     opportunity to explore it deeply. Rather than presenting interest alone, I wanted to show
-    **analytical thinking, research awareness, and interdisciplinary problem-solving**.
+    **analytical thinking, research awareness, and problem-solving**.
 
     UW–Madison’s emphasis on undergraduate research, biomedical sciences, and data-informed inquiry
-    aligns strongly with how I learn best. With access to UW–Madison’s academic environment and
+    aligns strongly with my interest. With access to UW–Madison’s academic environment and
     research opportunities, I am confident I can continue developing work like this at a
-    deeper and more rigorous level if given a chance to attend UW-Madison. - Emily Mendoza Dominguez
+    deeper and more rigorous level if given a chance to attend and prove myself. - Emily Mendoza Dominguez
     """)
 
 # =====================================================
