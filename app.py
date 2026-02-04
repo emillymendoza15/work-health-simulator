@@ -1,6 +1,7 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 # -----------------------------
 # Page Configuration
@@ -28,7 +29,7 @@ It presents *population-level associations*, not individual predictions or medic
 st.markdown("---")
 
 # =====================================================
-# SIDEBAR — STATE-SAFE INPUTS (BUG FIXED)
+# SIDEBAR — STATE-SAFE INPUTS
 # =====================================================
 st.sidebar.header("Input Parameters")
 
@@ -69,19 +70,9 @@ elif preset == "Low Work + Heavy Academics":
     st.session_state.academic_load = "Heavy"
     st.session_state.homework_hours = 12
 
-# Sliders (read from session_state)
-work_hours = st.sidebar.slider(
-    "Weekly Work Hours",
-    0, 40,
-    st.session_state.work_hours
-)
-
-sleep_hours = st.sidebar.slider(
-    "Average Sleep Per Night (hours)",
-    5.0, 9.0,
-    st.session_state.sleep_hours,
-    0.5
-)
+# Sliders
+work_hours = st.sidebar.slider("Weekly Work Hours", 0, 40, st.session_state.work_hours)
+sleep_hours = st.sidebar.slider("Average Sleep Per Night (hours)", 5.0, 9.0, st.session_state.sleep_hours, 0.5)
 
 academic_load_label = st.sidebar.selectbox(
     "Academic Load",
@@ -89,11 +80,7 @@ academic_load_label = st.sidebar.selectbox(
     index=["Light", "Moderate", "Heavy"].index(st.session_state.academic_load)
 )
 
-homework_hours = st.sidebar.slider(
-    "Homework / Study Hours per Week",
-    0, 15,
-    st.session_state.homework_hours
-)
+homework_hours = st.sidebar.slider("Homework / Study Hours per Week", 0, 15, st.session_state.homework_hours)
 
 st.sidebar.markdown("---")
 run_simulation = st.sidebar.button("Run Simulation")
@@ -111,14 +98,14 @@ academic_load_map = {"Light": 0.3, "Moderate": 0.6, "Heavy": 1.0}
 academic_load = academic_load_map[academic_load_label]
 
 # -----------------------------
-# MODEL LOGIC (NONLINEAR FIX)
+# MODEL LOGIC (NONLINEAR)
 # -----------------------------
 def run_model(work_hours, sleep_hours, academic_load, homework_hours):
     W_norm = work_hours / 40
     H_norm = homework_hours / 15
     sleep_deficit = max(0, (8 - sleep_hours) / 3)
 
-    # Nonlinear work threshold effect
+    # Threshold effect at 20 hrs/week
     if work_hours <= 20:
         work_penalty = 0.2 * W_norm
     else:
@@ -144,9 +131,7 @@ def run_model(work_hours, sleep_hours, academic_load, homework_hours):
 if run_simulation:
     st.header("Simulation Results")
 
-    AEI, CLS, SRI, LHR = run_model(
-        work_hours, sleep_hours, academic_load, homework_hours
-    )
+    AEI, CLS, SRI, LHR = run_model(work_hours, sleep_hours, academic_load, homework_hours)
 
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Academic Engagement Index", f"{int(AEI)} / 100")
@@ -156,24 +141,29 @@ if run_simulation:
 
     st.markdown("---")
 
-    # Line chart
+    # -----------------------------
+    # LABELED LINE CHART
+    # -----------------------------
     st.subheader("Work Hours vs Academic Engagement")
 
     hours = np.arange(0, 41)
     engagement = [run_model(h, sleep_hours, academic_load, homework_hours)[0] for h in hours]
 
-    df = pd.DataFrame({
-        "Weekly Work Hours": hours,
-        "Academic Engagement Index": engagement
-    })
+    fig, ax = plt.subplots()
+    ax.plot(hours, engagement)
+    ax.set_xlabel("Weekly Work Hours")
+    ax.set_ylabel("Academic Engagement Index")
+    ax.set_title("Relationship Between Work Hours and Academic Engagement")
+    ax.axvline(20, linestyle="--")  # threshold marker
 
-    st.line_chart(df.set_index("Weekly Work Hours"))
+    st.pyplot(fig)
 
     st.markdown("""
     **Interpretation:**  
-    The curve reflects a **threshold effect**, where moderate employment shows minimal impact,
-    while higher-intensity work is associated with sharper declines in academic engagement.
-    This pattern aligns with findings in adolescent education and health research.
+    The curve illustrates a **threshold effect**: moderate employment shows minimal impact,
+    while higher-intensity work (beyond ~20 hours/week) is associated with sharper declines
+    in academic engagement. This pattern aligns with findings in adolescent education and
+    health research.
     """)
 
 # =====================================================
