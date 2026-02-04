@@ -15,7 +15,7 @@ st.set_page_config(
 # -------------------------------------------------
 def reset_app():
     st.session_state.clear()
-    st.experimental_rerun()
+    st.rerun()
 
 # -------------------------------------------------
 # Title & Introduction
