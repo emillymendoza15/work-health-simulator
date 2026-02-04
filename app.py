@@ -1,19 +1,25 @@
 import streamlit as st
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 
-# -----------------------------
+# -------------------------------------------------
 # Page Configuration
-# -----------------------------
+# -------------------------------------------------
 st.set_page_config(
     page_title="Adolescent Employment & Health Outcomes",
     layout="wide"
 )
 
-# -----------------------------
+# -------------------------------------------------
+# Reset Function (TRUE RESET)
+# -------------------------------------------------
+def reset_app():
+    st.session_state.clear()
+    st.experimental_rerun()
+
+# -------------------------------------------------
 # Title & Introduction
-# -----------------------------
+# -------------------------------------------------
 st.title("Adolescent Employment, Academic Engagement, and Health Outcomes 🦡❤️")
 st.subheader("An Exploratory Biomedical Research Simulation")
 
@@ -28,17 +34,23 @@ It presents *population-level associations*, not individual predictions or medic
 
 st.markdown("---")
 
-# =====================================================
+# =================================================
 # SIDEBAR — STATE-SAFE INPUTS
-# =====================================================
+# =================================================
 st.sidebar.header("Input Parameters")
 
-# Initialize session state
-if "work_hours" not in st.session_state:
-    st.session_state.work_hours = 20
-    st.session_state.sleep_hours = 7.5
-    st.session_state.academic_load = "Moderate"
-    st.session_state.homework_hours = 8
+# Initialize defaults
+defaults = {
+    "preset": "Custom",
+    "work_hours": 20,
+    "sleep_hours": 7.5,
+    "academic_load": "Moderate",
+    "homework_hours": 8
+}
+
+for key, value in defaults.items():
+    if key not in st.session_state:
+        st.session_state[key] = value
 
 # Preset selector
 preset = st.sidebar.selectbox(
@@ -48,68 +60,88 @@ preset = st.sidebar.selectbox(
         "Moderate Work + Good Sleep",
         "High Work + Low Sleep",
         "Low Work + Heavy Academics"
-    ]
+    ],
+    index=[
+        "Custom",
+        "Moderate Work + Good Sleep",
+        "High Work + Low Sleep",
+        "Low Work + Heavy Academics"
+    ].index(st.session_state.preset)
 )
 
-# Apply presets
-if preset == "Moderate Work + Good Sleep":
-    st.session_state.work_hours = 15
-    st.session_state.sleep_hours = 8.0
-    st.session_state.academic_load = "Moderate"
-    st.session_state.homework_hours = 9
+# Apply preset ONLY when changed
+if preset != st.session_state.preset:
+    st.session_state.preset = preset
 
-elif preset == "High Work + Low Sleep":
-    st.session_state.work_hours = 30
-    st.session_state.sleep_hours = 6.0
-    st.session_state.academic_load = "Heavy"
-    st.session_state.homework_hours = 5
+    if preset == "Moderate Work + Good Sleep":
+        st.session_state.update({
+            "work_hours": 15,
+            "sleep_hours": 8.0,
+            "academic_load": "Moderate",
+            "homework_hours": 9
+        })
 
-elif preset == "Low Work + Heavy Academics":
-    st.session_state.work_hours = 5
-    st.session_state.sleep_hours = 7.0
-    st.session_state.academic_load = "Heavy"
-    st.session_state.homework_hours = 12
+    elif preset == "High Work + Low Sleep":
+        st.session_state.update({
+            "work_hours": 30,
+            "sleep_hours": 6.0,
+            "academic_load": "Heavy",
+            "homework_hours": 5
+        })
+
+    elif preset == "Low Work + Heavy Academics":
+        st.session_state.update({
+            "work_hours": 5,
+            "sleep_hours": 7.0,
+            "academic_load": "Heavy",
+            "homework_hours": 12
+        })
 
 # Sliders
-work_hours = st.sidebar.slider("Weekly Work Hours", 0, 40, st.session_state.work_hours)
-sleep_hours = st.sidebar.slider("Average Sleep Per Night (hours)", 5.0, 9.0, st.session_state.sleep_hours, 0.5)
-
+work_hours = st.sidebar.slider(
+    "Weekly Work Hours", 0, 40, st.session_state.work_hours
+)
+sleep_hours = st.sidebar.slider(
+    "Average Sleep Per Night (hours)", 5.0, 9.0, st.session_state.sleep_hours, 0.5
+)
 academic_load_label = st.sidebar.selectbox(
     "Academic Load",
     ["Light", "Moderate", "Heavy"],
     index=["Light", "Moderate", "Heavy"].index(st.session_state.academic_load)
 )
+homework_hours = st.sidebar.slider(
+    "Homework / Study Hours per Week", 0, 15, st.session_state.homework_hours
+)
 
-homework_hours = st.sidebar.slider("Homework / Study Hours per Week", 0, 15, st.session_state.homework_hours)
+# Persist slider changes
+st.session_state.work_hours = work_hours
+st.session_state.sleep_hours = sleep_hours
+st.session_state.academic_load = academic_load_label
+st.session_state.homework_hours = homework_hours
 
 st.sidebar.markdown("---")
 run_simulation = st.sidebar.button("Run Simulation")
-reset_simulation = st.sidebar.button("Restart Simulation")
+st.sidebar.button("Restart Simulation", on_click=reset_app)
 
-# Restart logic
-if reset_simulation:
-    st.session_state.clear()
-    st.experimental_rerun()
-
-# -----------------------------
+# -------------------------------------------------
 # Convert Academic Load
-# -----------------------------
+# -------------------------------------------------
 academic_load_map = {"Light": 0.3, "Moderate": 0.6, "Heavy": 1.0}
 academic_load = academic_load_map[academic_load_label]
 
-# -----------------------------
+# -------------------------------------------------
 # MODEL LOGIC (NONLINEAR)
-# -----------------------------
+# -------------------------------------------------
 def run_model(work_hours, sleep_hours, academic_load, homework_hours):
     W_norm = work_hours / 40
     H_norm = homework_hours / 15
     sleep_deficit = max(0, (8 - sleep_hours) / 3)
 
-    # Threshold effect at 20 hrs/week
+    # Threshold effect at 20 hours/week
     if work_hours <= 20:
         work_penalty = 0.2 * W_norm
     else:
-        work_penalty = 0.2 * (20 / 40) + 0.6 * ((work_hours - 20) / 20)
+        work_penalty = 0.1 + 0.6 * ((work_hours - 20) / 20)
 
     AEI_raw = (0.5 * H_norm) - work_penalty - (0.3 * sleep_deficit)
     AEI = np.clip((AEI_raw + 0.5) * 100, 0, 100)
@@ -125,68 +157,65 @@ def run_model(work_hours, sleep_hours, academic_load, homework_hours):
 
     return AEI, CLS, SRI, LHR
 
-# =====================================================
+# =================================================
 # RESULTS
-# =====================================================
+# =================================================
 if run_simulation:
     st.header("Simulation Results")
 
-    AEI, CLS, SRI, LHR = run_model(work_hours, sleep_hours, academic_load, homework_hours)
+    AEI, CLS, SRI, LHR = run_model(
+        work_hours, sleep_hours, academic_load, homework_hours
+    )
 
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Academic Engagement Index", f"{int(AEI)} / 100")
-    col2.metric("Cognitive Load", CLS)
-    col3.metric("Stress Risk", SRI)
-    col4.metric("Health Risk Trend", LHR)
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Academic Engagement Index", f"{int(AEI)} / 100")
+    c2.metric("Cognitive Load", CLS)
+    c3.metric("Stress Risk", SRI)
+    c4.metric("Health Risk Trend", LHR)
 
     st.markdown("---")
 
-    # -----------------------------
-    # LABELED LINE CHART
-    # -----------------------------
+    # Labeled, responsive chart
     st.subheader("Work Hours vs Academic Engagement")
 
     hours = np.arange(0, 41)
-    engagement = [run_model(h, sleep_hours, academic_load, homework_hours)[0] for h in hours]
+    engagement = [
+        run_model(h, sleep_hours, academic_load, homework_hours)[0]
+        for h in hours
+    ]
 
     fig, ax = plt.subplots()
     ax.plot(hours, engagement)
+    ax.axvline(20, linestyle="--")
     ax.set_xlabel("Weekly Work Hours")
     ax.set_ylabel("Academic Engagement Index")
-    ax.set_title("Relationship Between Work Hours and Academic Engagement")
-    ax.axvline(20, linestyle="--")  # threshold marker
+    ax.set_title("Modeled Relationship Between Work Hours and Academic Engagement")
 
     st.pyplot(fig)
 
-    st.markdown("""
-    **Interpretation:**  
-    The curve illustrates a **threshold effect**: moderate employment shows minimal impact,
-    while higher-intensity work (beyond ~20 hours/week) is associated with sharper declines
-    in academic engagement. This pattern aligns with findings in adolescent education and
-    health research.
-    """)
-
-# =====================================================
-# WHY UW–MADISON
-# =====================================================
+# =================================================
+# WHY UW–MADISON (RESTORED)
+# =================================================
 st.markdown("---")
 if st.button("Why UW–Madison?"):
     st.subheader("Why This Project and UW–Madison")
 
     st.markdown("""
-    This project was created to demonstrate how I engage with academic material when given the
-    opportunity to explore it deeply. Rather than presenting interest alone, I wanted to show
-    **analytical thinking, research awareness, and problem-solving**.
+    This project was created to reflect how I approach learning when given the opportunity
+    to explore complex questions. Rather than simply expressing interest, I wanted to
+    demonstrate **analytical thinking, research awareness, and problem-solving**.
 
+    
     UW–Madison’s emphasis on undergraduate research, biomedical sciences, and data-informed inquiry
     aligns strongly with my interest. With access to UW–Madison’s academic environment and
     research opportunities, I am confident I can continue developing work like this at a
     deeper and more rigorous level if given a chance to attend and prove myself. - Emily Mendoza Dominguez
+
     """)
 
-# =====================================================
+# =================================================
 # REFERENCES
-# =====================================================
+# =================================================
 st.markdown("---")
 st.subheader("References")
 
