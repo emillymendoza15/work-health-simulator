@@ -1,4 +1,4 @@
-import streamlit as st
+mport streamlit as st
 import numpy as np
 import pandas as pd
 
@@ -27,11 +27,19 @@ It presents *population-level associations*, not individual predictions or medic
 
 st.markdown("---")
 
-# -----------------------------
-# Sidebar Inputs
-# -----------------------------
+# =====================================================
+# SIDEBAR — STATE-SAFE INPUTS (BUG FIXED)
+# =====================================================
 st.sidebar.header("Input Parameters")
 
+# Initialize session state
+if "work_hours" not in st.session_state:
+    st.session_state.work_hours = 20
+    st.session_state.sleep_hours = 7.5
+    st.session_state.academic_load = "Moderate"
+    st.session_state.homework_hours = 8
+
+# Preset selector
 preset = st.sidebar.selectbox(
     "Preset Scenarios",
     [
@@ -42,37 +50,58 @@ preset = st.sidebar.selectbox(
     ]
 )
 
-default_values = {
-    "work_hours": 20,
-    "sleep_hours": 7.5,
-    "academic_load": "Moderate",
-    "homework_hours": 8
-}
-
+# Apply presets
 if preset == "Moderate Work + Good Sleep":
-    default_values = {"work_hours": 15, "sleep_hours": 8, "academic_load": "Moderate", "homework_hours": 9}
-elif preset == "High Work + Low Sleep":
-    default_values = {"work_hours": 30, "sleep_hours": 6, "academic_load": "Heavy", "homework_hours": 5}
-elif preset == "Low Work + Heavy Academics":
-    default_values = {"work_hours": 5, "sleep_hours": 7, "academic_load": "Heavy", "homework_hours": 12}
+    st.session_state.work_hours = 15
+    st.session_state.sleep_hours = 8.0
+    st.session_state.academic_load = "Moderate"
+    st.session_state.homework_hours = 9
 
-work_hours = st.sidebar.slider("Weekly Work Hours", 0, 40, default_values["work_hours"])
-sleep_hours = st.sidebar.slider("Average Sleep Per Night (hours)", 5.0, 9.0, default_values["sleep_hours"], 0.5)
+elif preset == "High Work + Low Sleep":
+    st.session_state.work_hours = 30
+    st.session_state.sleep_hours = 6.0
+    st.session_state.academic_load = "Heavy"
+    st.session_state.homework_hours = 5
+
+elif preset == "Low Work + Heavy Academics":
+    st.session_state.work_hours = 5
+    st.session_state.sleep_hours = 7.0
+    st.session_state.academic_load = "Heavy"
+    st.session_state.homework_hours = 12
+
+# Sliders (read from session_state)
+work_hours = st.sidebar.slider(
+    "Weekly Work Hours",
+    0, 40,
+    st.session_state.work_hours
+)
+
+sleep_hours = st.sidebar.slider(
+    "Average Sleep Per Night (hours)",
+    5.0, 9.0,
+    st.session_state.sleep_hours,
+    0.5
+)
+
 academic_load_label = st.sidebar.selectbox(
     "Academic Load",
     ["Light", "Moderate", "Heavy"],
-    index=["Light", "Moderate", "Heavy"].index(default_values["academic_load"])
+    index=["Light", "Moderate", "Heavy"].index(st.session_state.academic_load)
 )
-homework_hours = st.sidebar.slider("Homework / Study Hours per Week", 0, 15, default_values["homework_hours"])
+
+homework_hours = st.sidebar.slider(
+    "Homework / Study Hours per Week",
+    0, 15,
+    st.session_state.homework_hours
+)
 
 st.sidebar.markdown("---")
 run_simulation = st.sidebar.button("Run Simulation")
 reset_simulation = st.sidebar.button("Restart Simulation")
 
-# -----------------------------
-# Restart Logic
-# -----------------------------
+# Restart logic
 if reset_simulation:
+    st.session_state.clear()
     st.experimental_rerun()
 
 # -----------------------------
@@ -82,13 +111,14 @@ academic_load_map = {"Light": 0.3, "Moderate": 0.6, "Heavy": 1.0}
 academic_load = academic_load_map[academic_load_label]
 
 # -----------------------------
-# Model Logic (Nonlinear Threshold)
+# MODEL LOGIC (NONLINEAR FIX)
 # -----------------------------
 def run_model(work_hours, sleep_hours, academic_load, homework_hours):
     W_norm = work_hours / 40
     H_norm = homework_hours / 15
     sleep_deficit = max(0, (8 - sleep_hours) / 3)
 
+    # Nonlinear work threshold effect
     if work_hours <= 20:
         work_penalty = 0.2 * W_norm
     else:
@@ -108,13 +138,15 @@ def run_model(work_hours, sleep_hours, academic_load, homework_hours):
 
     return AEI, CLS, SRI, LHR
 
-# -----------------------------
-# Results
-# -----------------------------
+# =====================================================
+# RESULTS
+# =====================================================
 if run_simulation:
     st.header("Simulation Results")
 
-    AEI, CLS, SRI, LHR = run_model(work_hours, sleep_hours, academic_load, homework_hours)
+    AEI, CLS, SRI, LHR = run_model(
+        work_hours, sleep_hours, academic_load, homework_hours
+    )
 
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Academic Engagement Index", f"{int(AEI)} / 100")
@@ -124,18 +156,15 @@ if run_simulation:
 
     st.markdown("---")
 
+    # Line chart
     st.subheader("Work Hours vs Academic Engagement")
 
     hours = np.arange(0, 41)
-    engagement_curve = []
-
-    for h in hours:
-        aei, _, _, _ = run_model(h, sleep_hours, academic_load, homework_hours)
-        engagement_curve.append(aei)
+    engagement = [run_model(h, sleep_hours, academic_load, homework_hours)[0] for h in hours]
 
     df = pd.DataFrame({
         "Weekly Work Hours": hours,
-        "Academic Engagement Index": engagement_curve
+        "Academic Engagement Index": engagement
     })
 
     st.line_chart(df.set_index("Weekly Work Hours"))
@@ -147,9 +176,9 @@ if run_simulation:
     This pattern aligns with findings in adolescent education and health research.
     """)
 
-# -----------------------------
-# Why UW–Madison
-# -----------------------------
+# =====================================================
+# WHY UW–MADISON
+# =====================================================
 st.markdown("---")
 if st.button("Why UW–Madison?"):
     st.subheader("Why This Project and UW–Madison")
@@ -161,13 +190,13 @@ if st.button("Why UW–Madison?"):
 
     UW–Madison’s emphasis on undergraduate research, biomedical sciences, and data-informed inquiry
     aligns strongly with how I learn best. With access to UW–Madison’s academic environment and
-    research opportunities, I am confident I can continue developing work like this at a
-    deeper and more rigorous level if given a chance to attend UW-Madison. - Emily Mendoza Dominguez
+    research opportunities, I am confident I would continue developing work like this at a
+    deeper and more rigorous level.
     """)
 
-# -----------------------------
-# References
-# -----------------------------
+# =====================================================
+# REFERENCES
+# =====================================================
 st.markdown("---")
 st.subheader("References")
 
