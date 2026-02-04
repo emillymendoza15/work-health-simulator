@@ -1,4 +1,4 @@
-mport streamlit as st
+import streamlit as st
 import numpy as np
 import pandas as pd
 
@@ -190,8 +190,8 @@ if st.button("Why UW–Madison?"):
 
     UW–Madison’s emphasis on undergraduate research, biomedical sciences, and data-informed inquiry
     aligns strongly with how I learn best. With access to UW–Madison’s academic environment and
-    research opportunities, I am confident I would continue developing work like this at a
-    deeper and more rigorous level.
+    research opportunities, I am confident I can continue developing work like this at a
+    deeper and more rigorous level if given a chance to attend UW-Madison. - Emily Mendoza Dominguez
     """)
 
 # =====================================================
