@@ -6,18 +6,18 @@ import pandas as pd
 # Page Configuration
 # -----------------------------
 st.set_page_config(
-    page_title="Adolescent Work & Health Simulator",
+    page_title="Adolescent Employment & Health Outcomes",
     layout="wide"
 )
 
 # -----------------------------
 # Title & Introduction
 # -----------------------------
-st.title("Adolescent Work, Academic Performance, and Health")
+st.title("Adolescent Employment, Academic Engagement, and Health Outcomes 🦡❤️")
 st.subheader("An Exploratory Biomedical Research Simulation")
 
 st.markdown("""
-This interactive project explores how **work hours during adolescence** may be associated with  
+This interactive project explores how **employment during adolescence** may be associated with  
 **academic engagement, cognitive load, stress exposure, and long-term health trends**.
 
 **Disclaimer:**  
@@ -32,7 +32,6 @@ st.markdown("---")
 # -----------------------------
 st.sidebar.header("Input Parameters")
 
-# Preset Scenarios
 preset = st.sidebar.selectbox(
     "Preset Scenarios",
     [
@@ -43,40 +42,38 @@ preset = st.sidebar.selectbox(
     ]
 )
 
-# Default values
-work_hours = 20
-sleep_hours = 7.5
-academic_load_label = "Moderate"
-homework_hours = 8
+default_values = {
+    "work_hours": 20,
+    "sleep_hours": 7.5,
+    "academic_load": "Moderate",
+    "homework_hours": 8
+}
 
-# Apply presets
 if preset == "Moderate Work + Good Sleep":
-    work_hours = 15
-    sleep_hours = 8
-    academic_load_label = "Moderate"
-    homework_hours = 9
-
+    default_values = {"work_hours": 15, "sleep_hours": 8, "academic_load": "Moderate", "homework_hours": 9}
 elif preset == "High Work + Low Sleep":
-    work_hours = 30
-    sleep_hours = 6
-    academic_load_label = "Heavy"
-    homework_hours = 5
-
+    default_values = {"work_hours": 30, "sleep_hours": 6, "academic_load": "Heavy", "homework_hours": 5}
 elif preset == "Low Work + Heavy Academics":
-    work_hours = 5
-    sleep_hours = 7
-    academic_load_label = "Heavy"
-    homework_hours = 12
+    default_values = {"work_hours": 5, "sleep_hours": 7, "academic_load": "Heavy", "homework_hours": 12}
 
-# Sliders
-work_hours = st.sidebar.slider("Weekly Work Hours", 0, 40, work_hours)
-sleep_hours = st.sidebar.slider("Average Sleep Per Night (hours)", 5.0, 9.0, sleep_hours, 0.5)
-academic_load_label = st.sidebar.selectbox("Academic Load", ["Light", "Moderate", "Heavy"],
-                                           index=["Light","Moderate","Heavy"].index(academic_load_label))
-homework_hours = st.sidebar.slider("Homework / Study Hours per Week", 0, 15, homework_hours)
+work_hours = st.sidebar.slider("Weekly Work Hours", 0, 40, default_values["work_hours"])
+sleep_hours = st.sidebar.slider("Average Sleep Per Night (hours)", 5.0, 9.0, default_values["sleep_hours"], 0.5)
+academic_load_label = st.sidebar.selectbox(
+    "Academic Load",
+    ["Light", "Moderate", "Heavy"],
+    index=["Light", "Moderate", "Heavy"].index(default_values["academic_load"])
+)
+homework_hours = st.sidebar.slider("Homework / Study Hours per Week", 0, 15, default_values["homework_hours"])
 
 st.sidebar.markdown("---")
 run_simulation = st.sidebar.button("Run Simulation")
+reset_simulation = st.sidebar.button("Restart Simulation")
+
+# -----------------------------
+# Restart Logic
+# -----------------------------
+if reset_simulation:
+    st.experimental_rerun()
 
 # -----------------------------
 # Convert Academic Load
@@ -85,14 +82,19 @@ academic_load_map = {"Light": 0.3, "Moderate": 0.6, "Heavy": 1.0}
 academic_load = academic_load_map[academic_load_label]
 
 # -----------------------------
-# Model Logic
+# Model Logic (Nonlinear Threshold)
 # -----------------------------
 def run_model(work_hours, sleep_hours, academic_load, homework_hours):
     W_norm = work_hours / 40
     H_norm = homework_hours / 15
     sleep_deficit = max(0, (8 - sleep_hours) / 3)
 
-    AEI_raw = (0.5 * H_norm) - (0.4 * W_norm) - (0.3 * sleep_deficit)
+    if work_hours <= 20:
+        work_penalty = 0.2 * W_norm
+    else:
+        work_penalty = 0.2 * (20 / 40) + 0.6 * ((work_hours - 20) / 20)
+
+    AEI_raw = (0.5 * H_norm) - work_penalty - (0.3 * sleep_deficit)
     AEI = np.clip((AEI_raw + 0.5) * 100, 0, 100)
 
     CLS_raw = (0.5 * academic_load) + (0.3 * sleep_deficit) + (0.2 * W_norm)
@@ -120,10 +122,8 @@ if run_simulation:
     col3.metric("Stress Risk", SRI)
     col4.metric("Health Risk Trend", LHR)
 
-    # -----------------------------
-    # Line Chart: Work Hours vs Engagement
-    # -----------------------------
     st.markdown("---")
+
     st.subheader("Work Hours vs Academic Engagement")
 
     hours = np.arange(0, 41)
@@ -140,32 +140,29 @@ if run_simulation:
 
     st.line_chart(df.set_index("Weekly Work Hours"))
 
-    # -----------------------------
-    # Interpretation
-    # -----------------------------
     st.markdown("""
     **Interpretation:**  
-    The curve illustrates diminishing academic engagement as work hours increase,
-    particularly when sleep and academic demands remain constant. This reflects
-    patterns observed in adolescent education and health research.
+    The curve reflects a **threshold effect**, where moderate employment shows minimal impact,
+    while higher-intensity work is associated with sharper declines in academic engagement.
+    This pattern aligns with findings in adolescent education and health research.
     """)
 
 # -----------------------------
-# Why UW–Madison Button
+# Why UW–Madison
 # -----------------------------
 st.markdown("---")
 if st.button("Why UW–Madison?"):
     st.subheader("Why This Project and UW–Madison")
 
     st.markdown("""
-    This project was created to reflect how I approach learning when given the opportunity
-    to engage deeply with research. Rather than presenting interest alone, I wanted to
-    demonstrate **analytical thinking, research awareness, and problem-solving**.
+    This project was created to demonstrate how I engage with academic material when given the
+    opportunity to explore it deeply. Rather than presenting interest alone, I wanted to show
+    **analytical thinking, research awareness, and interdisciplinary problem-solving**.
 
-    UW–Madison’s emphasis on undergraduate research, data-informed inquiry, and biomedical
-    sciences aligns strongly with how I learn best by exploring complex systems and understanding
-    tradeoffs. With access to UW–Madison’s academic resources and research environment,
-    I am confident I would continue developing projects like this at a deeper and more rigorous level.
+    UW–Madison’s emphasis on undergraduate research, biomedical sciences, and data-informed inquiry
+    aligns strongly with how I learn best. With access to UW–Madison’s academic environment and
+    research opportunities, I am confident I can continue developing work like this at a
+    deeper and more rigorous level if given a chance to attend UW-Madison. - Emily Mendoza Dominguez
     """)
 
 # -----------------------------
