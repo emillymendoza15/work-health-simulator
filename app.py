@@ -21,7 +21,7 @@ st.set_page_config(
 # -------------------------------------------------
 # Title & Introduction
 # -------------------------------------------------
-st.title("Adolescent Employment, Academic Engagement, and Health Outcomes 🦡❤️")
+st.title("Adolescent Employment, Academic Engagement, and Health Outcomes ❤️")
 st.subheader("An Exploratory Biomedical Research Simulation")
 
 st.markdown("""
