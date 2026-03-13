@@ -199,19 +199,19 @@ if run_simulation:
     st.pyplot(fig)
 
 # =================================================
-# WHY UW–MADISON
+# WHY IU-Bloomington
 # =================================================
 st.markdown("---")
-if st.button("Why UW–Madison?"):
-    st.subheader("Why This Project and UW–Madison")
+if st.button("Why IU-Bloomington?"):
+    st.subheader("Why This Project and IU-Bloomington")
 
     st.markdown("""
     This project was created to reflect how I approach learning when given the opportunity
     to explore complex questions. Rather than simply expressing interest, I wanted to
     demonstrate **analytical thinking, research awareness, and interdisciplinary problem-solving**.
 
-    UW–Madison’s emphasis on undergraduate research, biomedical sciences, and data-informed inquiry
-    aligns strongly with my interest. With access to UW–Madison’s academic environment and
+    Indiana’s emphasis on undergraduate research, biomedical sciences, and data-informed inquiry
+    aligns strongly with my interest. With access to IU-Bloomington’s academic environment and
     research opportunities, I am confident I can continue developing work like this at a
     deeper and more rigorous level if given a chance to attend and prove myself. - Emily Mendoza Dominguez
     """)
